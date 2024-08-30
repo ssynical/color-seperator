@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Splitter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        #dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 100%;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #dropzone.dragover {
+            background-color: #f0f0f0;
+        }
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #status, #result {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #downloadlink {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        #downloadlink:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Color Splitter</h1>
+    <div id="dropzone">
+        <p>Drag and drop an image here, or click to select a file</p>
+    </div>
+    <input type="file" id="fileinput" style="display: none;" accept="image/*">
+    <img id="preview" style="display: none;">
+    <div id="status"></div>
+    <div id="result"></div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileinput = document.getElementById('fileinput');
+        const preview = document.getElementById('preview');
+        const status = document.getElementById('status');
+        const result = document.getElementById('result');
+
+        dropzone.onclick = () => fileinput.click();
+        dropzone.ondragover = e => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        };
+        dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+        dropzone.ondrop = e => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) processfile(e.dataTransfer.files[0]);
+        };
+        fileinput.onchange = e => {
+            if (e.target.files[0]) processfile(e.target.files[0]);
+        };
+
+        function processfile(file) {
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            status.textContent = 'Processing...';
+            result.textContent = '';
+
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+                const imagedata = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const colors = findcolors(imagedata.data);
+                status.textContent = `Found ${colors.length} colors. Separating...`;
+                separatecolors(colors, imagedata);
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        function findcolors(data) {
+            const colors = {};
+            for (let i = 0; i < data.length; i += 4) {
+                const key = data[i] + ',' + data[i+1] + ',' + data[i+2];
+                colors[key] = (colors[key] || 0) + 1;
+            }
+            return Object.entries(colors)
+                .filter(([, count]) => count > 100)
+                .map(([color]) => color.split(',').map(Number))
+                .sort((a, b) => b[0] + b[1] + b[2] - a[0] - a[1] - a[2]);
+        }
+
+        function separatecolors(colors, imagedata) {
+            const zip = new JSZip();
+            const promises = [];
+
+            for (const color of colors) {
+                const canvas = document.createElement('canvas');
+                canvas.width = imagedata.width;
+                canvas.height = imagedata.height;
+                const ctx = canvas.getContext('2d');
+                const separateddata = new Uint8ClampedArray(imagedata.data.length);
+
+                for (let i = 0; i < imagedata.data.length; i += 4) {
+                    if (Math.abs(imagedata.data[i] - color[0]) < 30 &&
+                        Math.abs(imagedata.data[i+1] - color[1]) < 30 &&
+                        Math.abs(imagedata.data[i+2] - color[2]) < 30) {
+                        separateddata[i] = color[0];
+                        separateddata[i+1] = color[1];
+                        separateddata[i+2] = color[2];
+                        separateddata[i+3] = imagedata.data[i+3];
+                    }
+                }
+
+                ctx.putImageData(new ImageData(separateddata, imagedata.width, imagedata.height), 0, 0);
+                
+                const colorhex = ((1 << 24) + (color[0] << 16) + (color[1] << 8) + color[2]).toString(16).slice(1).toUpperCase();
+                const filename = `color_${colorhex}.png`;
+
+                promises.push(new Promise(resolve => {
+                    canvas.toBlob(blob => {
+                        zip.file(filename, blob);
+                        resolve();
+                    }, 'image/png');
+                }));
+            }
+
+            Promise.all(promises).then(() => {
+                zip.generateAsync({type:"blob"}).then(content => {
+                    const url = URL.createObjectURL(content);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'color_separations.zip';
+                    link.id = 'downloadlink';
+                    link.textContent = 'Download color separations';
+                    result.innerHTML = '';
+                    result.appendChild(link);
+                    status.textContent = `Processed ${colors.length} colors. Click the button to download.`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
