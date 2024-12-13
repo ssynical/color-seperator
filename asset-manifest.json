@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/color-seperator/static/css/main.cf890fdb.css",
-    "main.js": "/color-seperator/static/js/main.13b0b661.js",
+    "main.css": "/color-seperator/static/css/main.bb90cd95.css",
+    "main.js": "/color-seperator/static/js/main.0da12220.js",
     "index.html": "/color-seperator/index.html",
-    "main.cf890fdb.css.map": "/color-seperator/static/css/main.cf890fdb.css.map",
-    "main.13b0b661.js.map": "/color-seperator/static/js/main.13b0b661.js.map"
+    "main.bb90cd95.css.map": "/color-seperator/static/css/main.bb90cd95.css.map",
+    "main.0da12220.js.map": "/color-seperator/static/js/main.0da12220.js.map"
   },
   "entrypoints": [
-    "static/css/main.cf890fdb.css",
-    "static/js/main.13b0b661.js"
+    "static/css/main.bb90cd95.css",
+    "static/js/main.0da12220.js"
   ]
 }
