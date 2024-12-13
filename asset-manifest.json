@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/color-seperator/static/css/main.cf890fdb.css",
+    "main.js": "/color-seperator/static/js/main.13b0b661.js",
+    "index.html": "/color-seperator/index.html",
+    "main.cf890fdb.css.map": "/color-seperator/static/css/main.cf890fdb.css.map",
+    "main.13b0b661.js.map": "/color-seperator/static/js/main.13b0b661.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.cf890fdb.css",
+    "static/js/main.13b0b661.js"
+  ]
+}
